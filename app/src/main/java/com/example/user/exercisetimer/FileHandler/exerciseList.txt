@@ -1,0 +1,2 @@
+Name - Description - Time in 00:00:00 for hold - Time in 00:00:00 for relax
+40 - 140 -
