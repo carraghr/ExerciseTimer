@@ -40,7 +40,7 @@ public class TimerActivity extends AppCompatActivity {
         selectedExercise = (Exercise) bundle.getSerializable("selectedExercise");
 
         final TextView times = (TextView) this.findViewById(R.id.times);
-        final Button startPause = (Button) this.findViewById(R.id.button2);
+        final Button startPauseButton = (Button) this.findViewById(R.id.button2);
 
         final TextView stateView = (TextView) this.findViewById(R.id.state);
 
@@ -49,61 +49,64 @@ public class TimerActivity extends AppCompatActivity {
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                if(!paused) {
-                    timeRemaining = timeRemaining - 1000;
-                    updateTimer(timeRemaining);
-                    if (timeRemaining <= 0) {
-                        if (state.equals("holding")) {
-                            state = "resting";
-                            stateView.setText("resting");
-                            timeRemaining = restTime;
-                            updateTimer(timeRemaining);
-                        }else{
-                            state = "holding";
-                            stateView.setText("holding");
-                            timeRemaining = holdTime;
-                            updateTimer(timeRemaining);
-                            timesRemaining -= 1;
-                            times.setText(""+timesRemaining);
-                            if (timesRemaining <= 0) {
-                                startPause.setText("Restart");
-                                stateView.setText("");
-                                paused=false;
-                                return;
+                if (timesRemaining > 0) {
+                    if (!paused) {
+                        timeRemaining = timeRemaining - 1000;
+                        updateTimer(timeRemaining);
+                        if (timeRemaining <= 0) {
+                            if (state.equals("holding")) {
+                                state = "resting";
+                                stateView.setText("rest");
+                                timeRemaining = restTime;
+                                updateTimer(timeRemaining);
+                            } else if(state.equals("resting")){
+                                state = "holding";
+                                stateView.setText("hold");
+                                timeRemaining = holdTime;
+                                updateTimer(timeRemaining);
+                                timesRemaining -= 1;
+                                times.setText("" + timesRemaining);
+                                if (timesRemaining <= 0) {
+                                    //state = "Restart";
+                                    stage = "Restart";
+                                    startPauseButton.setText("Restart");
+                                    stateView.setText("");
+                                    paused = false;
+                                    return;
+                                }
                             }
                         }
+                        handler.postDelayed(this, 1000);
                     }
-                    handler.postDelayed(this, 1000);
                 }
             }
         };
 
-        startPause.setOnClickListener(new View.OnClickListener() {
+        startPauseButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                stage = startPause.getText().toString();
+                stage = startPauseButton.getText().toString();
                 if(stage.equals("Start")){
                     handler.postDelayed(runnable,1000);
-                    startPause.setText("Pause");
+                    startPauseButton.setText("Pause");
                     paused=false;
                 }else if(stage.equals("Pause")){
                     stage = "Start";
-                    startPause.setText("Start");
+                    startPauseButton.setText("Start");
                     paused=true;
                 }else if(stage.equals("Restart")){
                     timesRemaining = Integer.parseInt(selectedExercise.getTimes());
                     times.setText(""+timesRemaining);
-                    holdTime = selectedExercise.getHoldTImeInMili();
-                    restTime = selectedExercise.getRestTImeInMili();
 
                     handler.postDelayed(runnable,1000);
                     stage = "Pause";
-                    startPause.setText("Pause");
+                    startPauseButton.setText("Pause");
                     paused=false;
                 }
-                stage = startPause.getText().toString();
+                stage = startPauseButton.getText().toString();
             }
         });
+
         if (savedInstanceState != null){
 
             stage = savedInstanceState.getString(STAGE, "Start");
@@ -115,7 +118,7 @@ public class TimerActivity extends AppCompatActivity {
             holdTime = selectedExercise.getHoldTImeInMili();
             restTime = selectedExercise.getRestTImeInMili();
 
-            startPause.setText(stage);
+            startPauseButton.setText(stage);
             times.setText(""+timesRemaining);
             updateTimer(timeRemaining);
 
@@ -144,7 +147,7 @@ public class TimerActivity extends AppCompatActivity {
         super.onSaveInstanceState(outState);
         // Save our own state now
         outState.putString(STAGE, stage);
-        outState.putString(STAGE, stage);
+        outState.putString(STATE, state);
         outState.putSerializable(selectedExerciseKey, selectedExercise);
         outState.putLong(STATE_Remainder, timeRemaining);
         outState.putInt(STATE_Times, timesRemaining);
