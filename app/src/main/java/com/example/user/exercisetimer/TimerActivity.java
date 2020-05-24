@@ -1,6 +1,10 @@
 package com.example.user.exercisetimer;
 
+import android.content.Context;
+import android.os.Build;
 import android.os.Handler;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -19,17 +23,21 @@ public class TimerActivity extends AppCompatActivity {
     private static final String selectedExerciseKey = "selectedExerciseKey";
     private static final String STATE_Remainder = "timeRemaining";
     private static final String STATE_Times = "times";
+
     Exercise selectedExercise;
     private String stage;
 
     private Handler handler;
+
     private long timeRemaining;
     private long holdTime;
     private long restTime;
+    private final long endtime = 0l;
     private int timesRemaining;
-
+    Vibrator v;
     private String state;
     private boolean paused = false;
+    Runnable runner2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,14 +59,37 @@ public class TimerActivity extends AppCompatActivity {
             public void run() {
                 if (timesRemaining > 0) {
                     if (!paused) {
+
                         timeRemaining = timeRemaining - 1000;
                         updateTimer(timeRemaining);
+
                         if (timeRemaining <= 0) {
                             if (state.equals("holding")) {
                                 state = "resting";
                                 stateView.setText("rest");
                                 timeRemaining = restTime;
                                 updateTimer(timeRemaining);
+                                v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    v.vibrate(VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE));
+                                } else {
+                                    //deprecated in API 26
+                                    v.vibrate(500);
+                                }
+                                if (timesRemaining <= 1) {
+                                    //state = "Restart";
+                                    stage = "Restart";
+                                    startPauseButton.setText("Restart");
+                                    stateView.setText("");
+                                    times.setText("" + 0);
+                                    updateTimer(endtime);
+                                    paused = false;
+
+                                    state = "holding";
+                                    timeRemaining = holdTime;
+                                    timesRemaining -= 1;
+                                    return;
+                                }
                             } else if(state.equals("resting")){
                                 state = "holding";
                                 stateView.setText("hold");
@@ -66,21 +97,24 @@ public class TimerActivity extends AppCompatActivity {
                                 updateTimer(timeRemaining);
                                 timesRemaining -= 1;
                                 times.setText("" + timesRemaining);
-                                if (timesRemaining <= 0) {
-                                    //state = "Restart";
-                                    stage = "Restart";
-                                    startPauseButton.setText("Restart");
-                                    stateView.setText("");
-                                    paused = false;
-                                    return;
+
+                                v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
+                                } else {
+                                    //deprecated in API 26
+                                    v.vibrate(500);
                                 }
                             }
+
                         }
                         handler.postDelayed(this, 1000);
                     }
                 }
             }
         };
+
+        runner2 = runnable;
 
         startPauseButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -89,6 +123,7 @@ public class TimerActivity extends AppCompatActivity {
                 if(stage.equals("Start")){
                     handler.postDelayed(runnable,1000);
                     startPauseButton.setText("Pause");
+                    stateView.setText("hold");
                     paused=false;
                 }else if(stage.equals("Pause")){
                     stage = "Start";
@@ -151,6 +186,12 @@ public class TimerActivity extends AppCompatActivity {
         outState.putSerializable(selectedExerciseKey, selectedExercise);
         outState.putLong(STATE_Remainder, timeRemaining);
         outState.putInt(STATE_Times, timesRemaining);
+    }
+
+    @Override
+    protected void onDestroy() {
+        handler.removeCallbacks(runner2);
+        super.onDestroy();
     }
 
     public void updateTimer(long time){
